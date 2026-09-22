@@ -1,0 +1,1270 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sonic — Лунная долина</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    overflow: hidden;
+    background: #05051a;
+    font-family: Arial, sans-serif;
+    user-select: none;
+}
+
+#game {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 75% 20%, rgba(120,120,255,.25), transparent 20%),
+        radial-gradient(circle at 20% 35%, rgba(50,100,255,.2), transparent 25%),
+        linear-gradient(#05051a, #111c45 60%, #182f20);
+}
+
+/* Космическое небо */
+.stars {
+    position: absolute;
+    inset: 0;
+    background-image:
+        radial-gradient(white 1px, transparent 1px),
+        radial-gradient(white 1px, transparent 1px);
+    background-size: 90px 90px, 140px 140px;
+    background-position: 10px 20px, 50px 70px;
+    opacity: .65;
+}
+
+/* Луна */
+.moon {
+    position: absolute;
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: #d9d9c7;
+    right: 10%;
+    top: 8%;
+    box-shadow: 0 0 40px rgba(255,255,220,.35);
+}
+
+.moon::before,
+.moon::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    background: #b8b8a8;
+}
+
+.moon::before {
+    width: 30px;
+    height: 30px;
+    left: 35px;
+    top: 45px;
+}
+
+.moon::after {
+    width: 22px;
+    height: 22px;
+    right: 35px;
+    bottom: 40px;
+}
+
+/* Мир */
+#world {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 5000px;
+    height: 100%;
+}
+
+/* Земля */
+#ground {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 5000px;
+    height: 130px;
+    background:
+        repeating-linear-gradient(
+            135deg,
+            #284a26 0px,
+            #284a26 20px,
+            #345d2e 20px,
+            #345d2e 40px
+        );
+    border-top: 8px solid #61a638;
+}
+
+/*
+    ВАЖНО:
+    Система координат мира:
+
+    y = 0      -> поверхность земли
+    y = 50     -> поверхность платформы на 50px выше земли
+    y = 90     -> поверхность платформы на 90px выше земли
+
+    Именно эта координата используется и для картинки,
+    и для физики.
+*/
+
+.platform {
+    position: absolute;
+    background:
+        linear-gradient(
+            135deg,
+            #6e9140,
+            #4d702d
+        );
+    border: 4px solid #91bd55;
+    border-radius: 5px;
+
+    /* небольшая декоративная тень */
+    box-shadow:
+        0 6px 0 #26391c,
+        inset 0 3px 0 rgba(255,255,255,.15);
+}
+
+/* Верхняя поверхность платформы */
+.platform::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: -4px;
+    width: 100%;
+    height: 4px;
+    background: #b4d76b;
+}
+
+/* Соник */
+#sonic {
+    position: absolute;
+    width: 42px;
+    height: 54px;
+    z-index: 20;
+    transition: none;
+}
+
+.sonic-body {
+    position: absolute;
+    width: 36px;
+    height: 36px;
+    left: 3px;
+    top: 8px;
+    border-radius: 50%;
+    background: #126be5;
+    box-shadow:
+        -7px 4px 0 #0d54b5,
+        6px 8px 0 #0d54b5;
+}
+
+.sonic-face {
+    position: absolute;
+    width: 21px;
+    height: 24px;
+    background: #f5d4a0;
+    border-radius: 50%;
+    right: 0;
+    top: 13px;
+}
+
+.sonic-eye {
+    position: absolute;
+    width: 5px;
+    height: 8px;
+    background: black;
+    border-radius: 50%;
+    right: 7px;
+    top: 18px;
+}
+
+.sonic-shoe {
+    position: absolute;
+    width: 20px;
+    height: 9px;
+    background: #e52b27;
+    border-radius: 8px;
+    bottom: 0;
+}
+
+.sonic-shoe.left {
+    left: 1px;
+}
+
+.sonic-shoe.right {
+    right: 1px;
+}
+
+#sonic.ball .sonic-body {
+    width: 42px;
+    height: 42px;
+    left: 0;
+    top: 5px;
+    border-radius: 50%;
+    background: #126be5;
+}
+
+#sonic.ball .sonic-face,
+#sonic.ball .sonic-eye,
+#sonic.ball .sonic-shoe {
+    display: none;
+}
+
+/* Кольца */
+.ring {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border: 5px solid #ffd900;
+    border-radius: 50%;
+    z-index: 10;
+    box-shadow: 0 0 7px rgba(255,220,0,.5);
+}
+
+/* Бадники */
+.badnik {
+    position: absolute;
+    width: 42px;
+    height: 42px;
+    z-index: 15;
+}
+
+.badnik-body {
+    position: absolute;
+    width: 42px;
+    height: 32px;
+    bottom: 0;
+    background: #73777d;
+    border-radius: 12px;
+    border: 3px solid #44474c;
+}
+
+.badnik-eye {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    background: #ff3c3c;
+    border-radius: 50%;
+    top: 11px;
+}
+
+.badnik-eye.left {
+    left: 10px;
+}
+
+.badnik-eye.right {
+    right: 10px;
+}
+
+/* Птичка после уничтожения */
+.bird {
+    position: absolute;
+    width: 26px;
+    height: 20px;
+    z-index: 25;
+}
+
+.bird-body {
+    position: absolute;
+    width: 17px;
+    height: 12px;
+    background: #d7d7d7;
+    border-radius: 50%;
+    left: 4px;
+    top: 5px;
+}
+
+.bird-wing {
+    position: absolute;
+    width: 14px;
+    height: 7px;
+    background: #999;
+    border-radius: 50%;
+    top: 2px;
+}
+
+.bird-wing.left {
+    left: 0;
+}
+
+.bird-wing.right {
+    right: 0;
+}
+
+/* HUD */
+#hud {
+    position: fixed;
+    z-index: 100;
+    left: 20px;
+    top: 18px;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    text-shadow: 2px 2px 3px black;
+}
+
+#help {
+    position: fixed;
+    z-index: 100;
+    right: 20px;
+    top: 18px;
+    color: white;
+    font-size: 14px;
+    text-align: right;
+    text-shadow: 2px 2px 3px black;
+}
+
+/* Кнопки телефона */
+.mobile-controls {
+    position: fixed;
+    z-index: 200;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.mobile-group {
+    display: flex;
+    gap: 10px;
+}
+
+.mobile-btn {
+    pointer-events: auto;
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    border: 2px solid white;
+    background: rgba(20,20,40,.7);
+    color: white;
+    font-size: 25px;
+}
+
+/* Оверлеи */
+.overlay {
+    position: fixed;
+    z-index: 500;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.75);
+    color: white;
+    text-align: center;
+}
+
+.overlay-box {
+    max-width: 500px;
+    padding: 35px;
+}
+
+.overlay h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+.overlay p {
+    font-size: 20px;
+    line-height: 1.5;
+}
+
+.overlay button {
+    margin-top: 25px;
+    padding: 13px 30px;
+    font-size: 20px;
+    border: 0;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.hidden {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div id="game">
+
+    <div class="stars"></div>
+    <div class="moon"></div>
+
+    <div id="world">
+
+        <div id="ground"></div>
+
+        <!-- Платформы -->
+        <div class="platform" data-x="500" data-top="80" data-width="180" data-height="25"></div>
+        <div class="platform" data-x="850" data-top="55" data-width="150" data-height="25"></div>
+        <div class="platform" data-x="1200" data-top="90" data-width="190" data-height="25"></div>
+        <div class="platform" data-x="1600" data-top="65" data-width="160" data-height="25"></div>
+        <div class="platform" data-x="1950" data-top="95" data-width="200" data-height="25"></div>
+        <div class="platform" data-x="2400" data-top="60" data-width="170" data-height="25"></div>
+        <div class="platform" data-x="2800" data-top="85" data-width="180" data-height="25"></div>
+        <div class="platform" data-x="3300" data-top="60" data-width="190" data-height="25"></div>
+        <div class="platform" data-x="3800" data-top="80" data-width="180" data-height="25"></div>
+
+        <!-- Кольца -->
+        <div class="ring" data-x="300" data-y="45"></div>
+        <div class="ring" data-x="350" data-y="45"></div>
+        <div class="ring" data-x="700" data-y="55"></div>
+        <div class="ring" data-x="900" data-y="105"></div>
+        <div class="ring" data-x="1050" data-y="45"></div>
+        <div class="ring" data-x="1300" data-y="115"></div>
+        <div class="ring" data-x="1450" data-y="45"></div>
+        <div class="ring" data-x="1700" data-y="90"></div>
+        <div class="ring" data-x="2050" data-y="120"></div>
+        <div class="ring" data-x="2250" data-y="45"></div>
+        <div class="ring" data-x="2500" data-y="85"></div>
+        <div class="ring" data-x="2900" data-y="110"></div>
+        <div class="ring" data-x="3150" data-y="45"></div>
+        <div class="ring" data-x="3400" data-y="85"></div>
+        <div class="ring" data-x="3900" data-y="105"></div>
+
+        <!-- Бадники -->
+        <div class="badnik" data-x="650" data-min="580" data-max="760" data-speed="1.2">
+            <div class="badnik-body"></div>
+            <div class="badnik-eye left"></div>
+            <div class="badnik-eye right"></div>
+        </div>
+
+        <div class="badnik" data-x="1100" data-min="1020" data-max="1180" data-speed="1">
+            <div class="badnik-body"></div>
+            <div class="badnik-eye left"></div>
+            <div class="badnik-eye right"></div>
+        </div>
+
+        <div class="badnik" data-x="1750" data-min="1680" data-max="1850" data-speed="1.4">
+            <div class="badnik-body"></div>
+            <div class="badnik-eye left"></div>
+            <div class="badnik-eye right"></div>
+        </div>
+
+        <div class="badnik" data-x="2600" data-min="2500" data-max="2700" data-speed="1.2">
+            <div class="badnik-body"></div>
+            <div class="badnik-eye left"></div>
+            <div class="badnik-eye right"></div>
+        </div>
+
+        <div class="badnik" data-x="3450" data-min="3350" data-max="3600" data-speed="1.5">
+            <div class="badnik-body"></div>
+            <div class="badnik-eye left"></div>
+            <div class="badnik-eye right"></div>
+        </div>
+
+        <!-- Соник -->
+        <div id="sonic">
+            <div class="sonic-body"></div>
+            <div class="sonic-face"></div>
+            <div class="sonic-eye"></div>
+            <div class="sonic-shoe left"></div>
+            <div class="sonic-shoe right"></div>
+        </div>
+
+    </div>
+</div>
+
+<div id="hud">
+    💍 Кольца: <span id="rings">0</span><br>
+    ⭐ Побеждено: <span id="defeated">0</span>/5
+</div>
+
+<div id="help">
+    ← → — движение<br>
+    X / Х — прыжок<br>
+    ↓ — катиться
+</div>
+
+<div class="mobile-controls">
+    <div class="mobile-group">
+        <button class="mobile-btn" id="leftBtn">←</button>
+        <button class="mobile-btn" id="downBtn">↓</button>
+        <button class="mobile-btn" id="rightBtn">→</button>
+    </div>
+
+    <button class="mobile-btn" id="jumpBtn">X</button>
+</div>
+
+<div id="deathScreen" class="overlay hidden">
+    <div class="overlay-box">
+        <h1>💥 Соник погиб</h1>
+        <p>У Соника не было колец, когда его атаковал бадник.</p>
+        <button onclick="location.reload()">Начать заново</button>
+    </div>
+</div>
+
+<div id="winScreen" class="overlay hidden">
+    <div class="overlay-box">
+        <h1>🏆 Победа!</h1>
+        <p>Все пять бадников уничтожены!</p>
+        <button onclick="location.reload()">Играть снова</button>
+    </div>
+</div>
+
+<script>
+/* =========================================================
+   НАСТРОЙКИ ФИЗИКИ
+   ========================================================= */
+
+const GRAVITY = 0.65;
+const JUMP_POWER = 12;
+const ACCELERATION = 0.7;
+const MAX_SPEED = 8;
+const FRICTION = 0.82;
+
+const GROUND_HEIGHT = 130;
+
+/*
+    playerY — высота ног Соника над физической поверхностью земли.
+
+    playerY = 0
+        Соник стоит на земле.
+
+    playerY = 80
+        Соник стоит на платформе с data-top="80".
+*/
+
+let playerX = 100;
+let playerY = 0;
+
+let velocityX = 0;
+let velocityY = 0;
+
+let onGround = true;
+let rolling = false;
+
+let rings = 0;
+let defeated = 0;
+
+let invincibleUntil = 0;
+
+const keys = {
+    left: false,
+    right: false,
+    down: false
+};
+
+const sonic = document.getElementById("sonic");
+const world = document.getElementById("world");
+
+const ringCounter = document.getElementById("rings");
+const defeatedCounter = document.getElementById("defeated");
+
+const platforms = [];
+const badniks = [];
+const ringObjects = [];
+
+
+/* =========================================================
+   ПЛАТФОРМЫ
+   ========================================================= */
+
+document.querySelectorAll(".platform").forEach((element) => {
+
+    const x = Number(element.dataset.x);
+    const top = Number(element.dataset.top);
+    const width = Number(element.dataset.width);
+    const height = Number(element.dataset.height);
+
+    /*
+        ВАЖНО:
+
+        top — это физическая высота верхней поверхности.
+
+        Для CSS:
+        bottom = высота земли + top - высота платформы
+
+        Поэтому верхний край картинки оказывается
+        ровно там же, где находится физическая поверхность.
+    */
+
+    element.style.left = x + "px";
+    element.style.bottom = (GROUND_HEIGHT + top - height) + "px";
+    element.style.width = width + "px";
+    element.style.height = height + "px";
+
+    platforms.push({
+        element,
+        x,
+        top,
+        width,
+        height
+    });
+});
+
+
+/* =========================================================
+   КОЛЬЦА
+   ========================================================= */
+
+document.querySelectorAll(".ring").forEach((element) => {
+
+    const x = Number(element.dataset.x);
+    const y = Number(element.dataset.y);
+
+    element.style.left = x + "px";
+
+    /*
+        y — центр кольца над землёй.
+    */
+
+    element.style.bottom =
+        (GROUND_HEIGHT + y - 12) + "px";
+
+    ringObjects.push({
+        element,
+        x,
+        y,
+        collected: false
+    });
+});
+
+
+/* =========================================================
+   БАДНИКИ
+   ========================================================= */
+
+document.querySelectorAll(".badnik").forEach((element) => {
+
+    const badnik = {
+        element,
+        x: Number(element.dataset.x),
+        min: Number(element.dataset.min),
+        max: Number(element.dataset.max),
+        speed: Number(element.dataset.speed),
+        direction: 1,
+        alive: true
+    };
+
+    element.style.left = badnik.x + "px";
+    element.style.bottom = GROUND_HEIGHT + "px";
+
+    badniks.push(badnik);
+});
+
+
+/* =========================================================
+   УПРАВЛЕНИЕ
+   ========================================================= */
+
+document.addEventListener("keydown", (event) => {
+
+    if (
+        event.code === "ArrowLeft" ||
+        event.code === "ArrowRight" ||
+        event.code === "ArrowDown" ||
+        event.code === "KeyX" ||
+        event.code === "KeyX"
+    ) {
+        event.preventDefault();
+    }
+
+    if (event.code === "ArrowLeft") {
+        keys.left = true;
+    }
+
+    if (event.code === "ArrowRight") {
+        keys.right = true;
+    }
+
+    if (event.code === "ArrowDown") {
+        keys.down = true;
+    }
+
+    if (event.code === "KeyX") {
+        jump();
+    }
+});
+
+document.addEventListener("keyup", (event) => {
+
+    if (event.code === "ArrowLeft") {
+        keys.left = false;
+    }
+
+    if (event.code === "ArrowRight") {
+        keys.right = false;
+    }
+
+    if (event.code === "ArrowDown") {
+        keys.down = false;
+    }
+});
+
+
+/* =========================================================
+   МОБИЛЬНОЕ УПРАВЛЕНИЕ
+   ========================================================= */
+
+function buttonControl(button, key) {
+
+    button.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        keys[key] = true;
+    });
+
+    button.addEventListener("pointerup", (event) => {
+        event.preventDefault();
+        keys[key] = false;
+    });
+
+    button.addEventListener("pointercancel", () => {
+        keys[key] = false;
+    });
+
+    button.addEventListener("pointerleave", () => {
+        keys[key] = false;
+    });
+}
+
+buttonControl(document.getElementById("leftBtn"), "left");
+buttonControl(document.getElementById("rightBtn"), "right");
+buttonControl(document.getElementById("downBtn"), "down");
+
+document.getElementById("jumpBtn").addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    jump();
+});
+
+
+/* =========================================================
+   ПРЫЖОК
+   ========================================================= */
+
+function jump() {
+
+    if (!onGround) {
+        return;
+    }
+
+    velocityY = JUMP_POWER;
+    onGround = false;
+
+    rolling = true;
+    sonic.classList.add("ball");
+}
+
+
+/* =========================================================
+   ПРОВЕРКА ОПОРЫ
+   ========================================================= */
+
+function findSupport() {
+
+    /*
+        Сначала проверяем землю.
+    */
+
+    if (playerY <= 0.001) {
+        return {
+            type: "ground",
+            top: 0
+        };
+    }
+
+    /*
+        Затем платформы.
+
+        Соник должен находиться непосредственно над платформой.
+    */
+
+    const sonicLeft = playerX;
+    const sonicRight = playerX + 42;
+
+    for (const platform of platforms) {
+
+        const platformLeft = platform.x;
+        const platformRight = platform.x + platform.width;
+
+        const overlaps =
+            sonicRight > platformLeft &&
+            sonicLeft < platformRight;
+
+        if (
+            overlaps &&
+            Math.abs(playerY - platform.top) < 2
+        ) {
+            return platform;
+        }
+    }
+
+    return null;
+}
+
+
+/* =========================================================
+   ФИЗИКА
+   ========================================================= */
+
+function updatePhysics() {
+
+    const previousY = playerY;
+
+    /* Горизонтальное движение */
+
+    if (keys.left) {
+        velocityX -= ACCELERATION;
+    }
+
+    if (keys.right) {
+        velocityX += ACCELERATION;
+    }
+
+    if (!keys.left && !keys.right) {
+        velocityX *= FRICTION;
+    }
+
+    velocityX = Math.max(
+        -MAX_SPEED,
+        Math.min(MAX_SPEED, velocityX)
+    );
+
+    playerX += velocityX;
+
+    if (playerX < 0) {
+        playerX = 0;
+        velocityX = 0;
+    }
+
+    if (playerX > 4900) {
+        playerX = 4900;
+        velocityX = 0;
+    }
+
+
+    /* Катание */
+
+    const moving =
+        keys.left ||
+        keys.right ||
+        Math.abs(velocityX) > 1;
+
+    if (
+        onGround &&
+        keys.down &&
+        moving
+    ) {
+        rolling = true;
+    }
+
+    /*
+        Если игрок перестал нажимать вниз
+        и почти остановился — возвращаем обычную форму.
+    */
+
+    if (
+        onGround &&
+        !keys.down &&
+        Math.abs(velocityX) < 1.5
+    ) {
+        rolling = false;
+    }
+
+    if (rolling) {
+        sonic.classList.add("ball");
+    } else {
+        sonic.classList.remove("ball");
+    }
+
+
+    /* Гравитация */
+
+    if (!onGround) {
+
+        velocityY -= GRAVITY;
+        playerY += velocityY;
+
+        /*
+            Проверяем пересечение поверхности платформ
+            во время падения.
+
+            Ключевой момент:
+            предыдущая высота была ВЫШЕ поверхности,
+            а новая стала НИЖЕ.
+        */
+
+        if (velocityY <= 0) {
+
+            for (const platform of platforms) {
+
+                const sonicLeft = playerX;
+                const sonicRight = playerX + 42;
+
+                const platformLeft = platform.x;
+                const platformRight =
+                    platform.x + platform.width;
+
+                const horizontalOverlap =
+                    sonicRight > platformLeft &&
+                    sonicLeft < platformRight;
+
+                const crossedSurface =
+                    previousY >= platform.top &&
+                    playerY <= platform.top;
+
+                if (
+                    horizontalOverlap &&
+                    crossedSurface
+                ) {
+                    playerY = platform.top;
+                    velocityY = 0;
+                    onGround = true;
+                    break;
+                }
+            }
+        }
+
+        /*
+            Проверяем землю.
+        */
+
+        if (playerY <= 0) {
+
+            playerY = 0;
+            velocityY = 0;
+            onGround = true;
+        }
+
+    } else {
+
+        /*
+            Соник уже стоит.
+
+            Проверяем, не ушёл ли он за край платформы.
+            Это устраняет "зависание" в воздухе.
+        */
+
+        const support = findSupport();
+
+        if (!support) {
+            onGround = false;
+        }
+    }
+}
+
+
+/* =========================================================
+   ОТРИСОВКА СОНИКА
+   ========================================================= */
+
+function drawSonic() {
+
+    sonic.style.left = playerX + "px";
+
+    /*
+        Физическая координата playerY превращается
+        в CSS bottom.
+
+        Поэтому визуальное положение и физическое
+        положение используют одну систему координат.
+    */
+
+    sonic.style.bottom =
+        (GROUND_HEIGHT + playerY) + "px";
+
+    /*
+        Небольшой эффект мигания после получения урона.
+    */
+
+    if (Date.now() < invincibleUntil) {
+        sonic.style.opacity =
+            Math.floor(Date.now() / 100) % 2
+                ? "0.35"
+                : "1";
+    } else {
+        sonic.style.opacity = "1";
+    }
+}
+
+
+/* =========================================================
+   КОЛЬЦА
+   ========================================================= */
+
+function updateRings() {
+
+    const sonicLeft = playerX;
+    const sonicRight = playerX + 42;
+
+    const sonicBottom = playerY;
+    const sonicTop = playerY + 54;
+
+    for (const ring of ringObjects) {
+
+        if (ring.collected) {
+            continue;
+        }
+
+        const ringLeft = ring.x;
+        const ringRight = ring.x + 24;
+
+        const ringBottom = ring.y - 12;
+        const ringTop = ring.y + 12;
+
+        const collision =
+            sonicRight > ringLeft &&
+            sonicLeft < ringRight &&
+            sonicTop > ringBottom &&
+            sonicBottom < ringTop;
+
+        if (collision) {
+
+            ring.collected = true;
+            ring.element.style.display = "none";
+
+            rings++;
+            ringCounter.textContent = rings;
+        }
+    }
+}
+
+
+/* =========================================================
+   БАДНИКИ
+   ========================================================= */
+
+function updateBadniks() {
+
+    for (const badnik of badniks) {
+
+        if (!badnik.alive) {
+            continue;
+        }
+
+        badnik.x +=
+            badnik.speed * badnik.direction;
+
+        if (badnik.x <= badnik.min) {
+            badnik.x = badnik.min;
+            badnik.direction = 1;
+        }
+
+        if (badnik.x >= badnik.max) {
+            badnik.x = badnik.max;
+            badnik.direction = -1;
+        }
+
+        badnik.element.style.left =
+            badnik.x + "px";
+
+
+        /* Столкновение */
+
+        const sonicLeft = playerX;
+        const sonicRight = playerX + 42;
+
+        const enemyLeft = badnik.x;
+        const enemyRight = badnik.x + 42;
+
+        const horizontal =
+            sonicRight > enemyLeft &&
+            sonicLeft < enemyRight;
+
+        const vertical =
+            playerY < 55;
+
+        if (
+            horizontal &&
+            vertical &&
+            Date.now() > invincibleUntil
+        ) {
+
+            if (rolling) {
+                destroyBadnik(badnik);
+            } else {
+                damagePlayer(badnik.x);
+            }
+        }
+    }
+}
+
+
+/* =========================================================
+   УНИЧТОЖЕНИЕ БАДНИКА
+   ========================================================= */
+
+function destroyBadnik(badnik) {
+
+    badnik.alive = false;
+    badnik.element.remove();
+
+    defeated++;
+    defeatedCounter.textContent = defeated;
+
+    createBird(
+        badnik.x,
+        GROUND_HEIGHT + 40
+    );
+
+    if (defeated >= 5) {
+        setTimeout(() => {
+            document
+                .getElementById("winScreen")
+                .classList.remove("hidden");
+        }, 500);
+    }
+}
+
+
+/* =========================================================
+   ПТИЧКА
+   ========================================================= */
+
+function createBird(x, bottom) {
+
+    const bird = document.createElement("div");
+    bird.className = "bird";
+
+    bird.innerHTML = `
+        <div class="bird-body"></div>
+        <div class="bird-wing left"></div>
+        <div class="bird-wing right"></div>
+    `;
+
+    world.appendChild(bird);
+
+    let birdX = x;
+    let birdY = bottom;
+
+    let timer = 0;
+
+    function fly() {
+
+        timer++;
+
+        birdX += 1.5;
+        birdY += 1.2;
+
+        bird.style.left = birdX + "px";
+        bird.style.bottom = birdY + "px";
+
+        if (timer < 180) {
+            requestAnimationFrame(fly);
+        } else {
+            bird.remove();
+        }
+    }
+
+    fly();
+}
+
+
+/* =========================================================
+   ПОЛУЧЕНИЕ УРОНА
+   ========================================================= */
+
+function damagePlayer(enemyX) {
+
+    /*
+        Если кольца есть —
+        Соник теряет ВСЕ кольца.
+    */
+
+    if (rings > 0) {
+
+        rings = 0;
+        ringCounter.textContent = "0";
+
+        /*
+            Отбрасывание от противника.
+        */
+
+        if (playerX < enemyX) {
+            velocityX = -8;
+        } else {
+            velocityX = 8;
+        }
+
+        velocityY = 7;
+
+        onGround = false;
+
+        /*
+            Ставим Соника немного выше земли,
+            чтобы физика продолжила движение.
+        */
+
+        playerY = Math.max(playerY, 20);
+
+        invincibleUntil =
+            Date.now() + 1500;
+
+    } else {
+
+        /*
+            Если колец нет — смерть.
+        */
+
+        document
+            .getElementById("deathScreen")
+            .classList.remove("hidden");
+    }
+}
+
+
+/* =========================================================
+   КАМЕРА
+   ========================================================= */
+
+function updateCamera() {
+
+    const screenCenter =
+        window.innerWidth / 2;
+
+    let cameraX =
+        playerX - screenCenter;
+
+    cameraX = Math.max(
+        0,
+        Math.min(
+            5000 - window.innerWidth,
+            cameraX
+        )
+    );
+
+    world.style.transform =
+        `translateX(${-cameraX}px)`;
+}
+
+
+/* =========================================================
+   ИГРОВОЙ ЦИКЛ
+   ========================================================= */
+
+function gameLoop() {
+
+    updatePhysics();
+    updateRings();
+    updateBadniks();
+
+    drawSonic();
+    updateCamera();
+
+    requestAnimationFrame(gameLoop);
+}
+
+
+/* =========================================================
+   ЗАПУСК
+   ========================================================= */
+
+ringCounter.textContent = "0";
+defeatedCounter.textContent = "0";
+
+gameLoop();
+</script>
+
+</body>
+</html>
+```

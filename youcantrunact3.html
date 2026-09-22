@@ -1,0 +1,803 @@
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BioChem Kahoot</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #7b2ff7, #f107a3);
+    color: white;
+    transition: background 0.4s, color 0.4s;
+}
+
+body.dark {
+    background: linear-gradient(135deg, #111827, #312e81);
+}
+
+.screen {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+/* НАЧАЛЬНЫЙ ЭКРАН */
+
+#startScreen {
+    text-align: center;
+}
+
+.startBox {
+    width: min(700px, 95vw);
+    padding: 55px 30px;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.15);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+.logo {
+    font-size: clamp(42px, 8vw, 76px);
+    font-weight: 900;
+    margin-bottom: 15px;
+    text-shadow: 4px 4px 0 rgba(0,0,0,0.2);
+}
+
+.subtitle {
+    font-size: 21px;
+    margin-bottom: 40px;
+    opacity: 0.9;
+}
+
+.startButton,
+#restartButton {
+    border: none;
+    border-radius: 16px;
+    padding: 18px 42px;
+    font-size: 22px;
+    font-weight: bold;
+    cursor: pointer;
+    background: white;
+    color: #6d28d9;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.startButton:hover,
+#restartButton:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.3);
+}
+
+.info {
+    margin-top: 25px;
+    font-size: 15px;
+    opacity: 0.8;
+}
+
+/* ОПРОС */
+
+#quizScreen {
+    display: none;
+    width: 100%;
+}
+
+.quizContainer {
+    width: min(900px, 95vw);
+    margin: auto;
+}
+
+.top {
+    margin-bottom: 20px;
+}
+
+.topLine {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+.progress {
+    width: 100%;
+    height: 12px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-top: 12px;
+}
+
+#progressBar {
+    width: 0%;
+    height: 100%;
+    background: white;
+    transition: width 0.3s;
+}
+
+#timer {
+    display: inline-block;
+    margin: 20px auto;
+    padding: 10px 22px;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.2);
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.questionBox {
+    background: rgba(255,255,255,0.15);
+    border-radius: 25px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.2);
+}
+
+#question {
+    font-size: clamp(24px, 4vw, 36px);
+    margin: 10px 0 30px;
+}
+
+.answers {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.answer {
+    min-height: 75px;
+    border: none;
+    border-radius: 15px;
+    background: white;
+    color: #222;
+    font-size: 19px;
+    font-weight: bold;
+    cursor: pointer;
+    padding: 15px;
+    transition: transform 0.15s;
+}
+
+.answer:hover:not(:disabled) {
+    transform: scale(1.02);
+}
+
+.answer.correct {
+    background: #35d16f;
+    color: white;
+}
+
+.answer.wrong {
+    background: #777;
+    color: white;
+}
+
+.answer:disabled {
+    cursor: default;
+}
+
+/* РЕЗУЛЬТАТ */
+
+#result {
+    display: none;
+    text-align: center;
+}
+
+.resultBox {
+    width: min(650px, 95vw);
+    padding: 50px 30px;
+    border-radius: 30px;
+    background: rgba(255,255,255,0.15);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+
+#score {
+    font-size: 48px;
+    font-weight: bold;
+    margin: 20px;
+}
+
+#message {
+    font-size: 22px;
+    margin-bottom: 30px;
+}
+
+/* КНОПКА ТЕМЫ */
+
+#themeButton {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 50%;
+    background: white;
+    color: #333;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* МОБИЛЬНАЯ ВЕРСИЯ */
+
+@media (max-width: 650px) {
+    .answers {
+        grid-template-columns: 1fr;
+    }
+
+    .startBox {
+        padding: 40px 20px;
+    }
+
+    .questionBox {
+        padding: 20px;
+    }
+
+    .answer {
+        min-height: 65px;
+    }
+
+    .topLine {
+        font-size: 15px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<!-- НАЧАЛЬНЫЙ ЭКРАН -->
+
+<div id="startScreen" class="screen">
+    <div class="startBox">
+        <div class="logo">BioChem Kahoot</div>
+
+        <div class="subtitle">
+            🧬 Биология × ⚗️ Химия
+        </div>
+
+        <button class="startButton" onclick="startQuiz()">
+            Начать опрос
+        </button>
+
+        <div class="info">
+            15 вопросов · 6 вариантов ответа · 20 секунд на вопрос
+        </div>
+    </div>
+</div>
+
+
+<!-- ЭКРАН ОПРОСА -->
+
+<div id="quizScreen" class="screen">
+
+    <div class="quizContainer">
+
+        <div class="top">
+
+            <div class="topLine">
+                <span id="questionNumber">Вопрос 1 из 15</span>
+                <span id="scoreDisplay">Очки: 0</span>
+            </div>
+
+            <div class="progress">
+                <div id="progressBar"></div>
+            </div>
+
+        </div>
+
+        <div style="text-align:center;">
+            <div id="timer">20</div>
+        </div>
+
+        <div class="questionBox">
+
+            <h1 id="question"></h1>
+
+            <div id="answers" class="answers"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ЭКРАН РЕЗУЛЬТАТА -->
+
+<div id="result" class="screen">
+
+    <div class="resultBox">
+
+        <h1>🎉 Опрос завершён!</h1>
+
+        <div id="score"></div>
+
+        <div id="message"></div>
+
+        <button id="restartButton">
+            Пройти ещё раз
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ -->
+
+<button id="themeButton" onclick="toggleTheme()" title="Сменить тему">
+    🌙
+</button>
+
+
+<script>
+
+const questions = [
+
+    {
+        question: "Какой органоид клетки отвечает за производство энергии?",
+        answers: [
+            ["Митохондрия", true],
+            ["Рибосома", false],
+            ["Ядро", false],
+            ["Лизосома", false],
+            ["Аппарат Гольджи", false],
+            ["Вакуоль", false]
+        ]
+    },
+
+    {
+        question: "Какой химический элемент имеет символ O?",
+        answers: [
+            ["Кислород", true],
+            ["Золото", false],
+            ["Осмий", false],
+            ["Олово", false],
+            ["Уран", false],
+            ["Озон", false]
+        ]
+    },
+
+    {
+        question: "Как называется процесс образования органических веществ растением из CO₂ и воды?",
+        answers: [
+            ["Фотосинтез", true],
+            ["Дыхание", false],
+            ["Брожение", false],
+            ["Осмос", false],
+            ["Транспирация", false],
+            ["Диффузия", false]
+        ]
+    },
+
+    {
+        question: "Какова химическая формула воды?",
+        answers: [
+            ["H₂O", true],
+            ["CO₂", false],
+            ["O₂", false],
+            ["H₂", false],
+            ["NaCl", false],
+            ["CH₄", false]
+        ]
+    },
+
+    {
+        question: "Какая молекула является основным источником энергии для клетки?",
+        answers: [
+            ["АТФ", true],
+            ["ДНК", false],
+            ["РНК", false],
+            ["Глюкоза-6-фосфат", false],
+            ["Холестерин", false],
+            ["Аминокислота", false]
+        ]
+    },
+
+    {
+        question: "Какой газ растения поглощают при фотосинтезе?",
+        answers: [
+            ["Углекислый газ", true],
+            ["Кислород", false],
+            ["Азот", false],
+            ["Водород", false],
+            ["Метан", false],
+            ["Озон", false]
+        ]
+    },
+
+    {
+        question: "Какой элемент обозначается символом Na?",
+        answers: [
+            ["Натрий", true],
+            ["Азот", false],
+            ["Неон", false],
+            ["Никель", false],
+            ["Ниобий", false],
+            ["Нептуний", false]
+        ]
+    },
+
+    {
+        question: "Какая структура хранит наследственную информацию клетки?",
+        answers: [
+            ["ДНК", true],
+            ["АТФ", false],
+            ["Липид", false],
+            ["Глюкоза", false],
+            ["Белок", false],
+            ["Крахмал", false]
+        ]
+    },
+
+    {
+        question: "Какой pH имеет нейтральная среда при комнатной температуре?",
+        answers: [
+            ["7", true],
+            ["0", false],
+            ["5", false],
+            ["9", false],
+            ["12", false],
+            ["14", false]
+        ]
+    },
+
+    {
+        question: "Какие клетки крови отвечают главным образом за перенос кислорода?",
+        answers: [
+            ["Эритроциты", true],
+            ["Лейкоциты", false],
+            ["Тромбоциты", false],
+            ["Лимфоциты", false],
+            ["Нейроны", false],
+            ["Макрофаги", false]
+        ]
+    },
+
+    {
+        question: "Какой газ необходим человеку для клеточного дыхания?",
+        answers: [
+            ["Кислород", true],
+            ["Азот", false],
+            ["Углекислый газ", false],
+            ["Гелий", false],
+            ["Водород", false],
+            ["Метан", false]
+        ]
+    },
+
+    {
+        question: "Какой металл является главным компонентом гемоглобина?",
+        answers: [
+            ["Железо", true],
+            ["Кальций", false],
+            ["Магний", false],
+            ["Натрий", false],
+            ["Медь", false],
+            ["Цинк", false]
+        ]
+    },
+
+    {
+        question: "Как называется деление клетки, при котором образуются две генетически похожие дочерние клетки?",
+        answers: [
+            ["Митоз", true],
+            ["Мейоз", false],
+            ["Оплодотворение", false],
+            ["Трансляция", false],
+            ["Репликация", false],
+            ["Транскрипция", false]
+        ]
+    },
+
+    {
+        question: "Какой элемент имеет атомный номер 6?",
+        answers: [
+            ["Углерод", true],
+            ["Кислород", false],
+            ["Азот", false],
+            ["Бор", false],
+            ["Кремний", false],
+            ["Неон", false]
+        ]
+    },
+
+    {
+        question: "Какая частица имеет отрицательный электрический заряд?",
+        answers: [
+            ["Электрон", true],
+            ["Протон", false],
+            ["Нейтрон", false],
+            ["Атом", false],
+            ["Молекула", false],
+            ["Фотон", false]
+        ]
+    }
+
+];
+
+
+let currentQuestion = 0;
+let score = 0;
+let timeLeft = 20;
+let timerID = null;
+let answered = false;
+
+
+/* ПЕРЕМЕШИВАНИЕ */
+
+function shuffle(array) {
+
+    const newArray = [...array];
+
+    for (let i = newArray.length - 1; i > 0; i--) {
+
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [newArray[i], newArray[j]] =
+        [newArray[j], newArray[i]];
+    }
+
+    return newArray;
+}
+
+
+/* НАЧАЛО ИГРЫ */
+
+function startQuiz() {
+
+    document.getElementById("startScreen").style.display = "none";
+    document.getElementById("result").style.display = "none";
+    document.getElementById("quizScreen").style.display = "flex";
+
+    currentQuestion = 0;
+    score = 0;
+
+    showQuestion();
+}
+
+
+/* ПОКАЗ ВОПРОСА */
+
+function showQuestion() {
+
+    clearInterval(timerID);
+
+    answered = false;
+    timeLeft = 20;
+
+    const q = questions[currentQuestion];
+
+    document.getElementById("questionNumber").textContent =
+        "Вопрос " + (currentQuestion + 1) +
+        " из " + questions.length;
+
+    document.getElementById("scoreDisplay").textContent =
+        "Очки: " + score;
+
+    document.getElementById("progressBar").style.width =
+        ((currentQuestion / questions.length) * 100) + "%";
+
+    document.getElementById("question").textContent =
+        q.question;
+
+    const answersContainer =
+        document.getElementById("answers");
+
+    answersContainer.innerHTML = "";
+
+    const shuffledAnswers = shuffle(q.answers);
+
+    shuffledAnswers.forEach(function(answerData) {
+
+        const button = document.createElement("button");
+
+        button.className = "answer";
+        button.textContent = answerData[0];
+        button.dataset.correct = answerData[1];
+
+        button.addEventListener("click", function() {
+            selectAnswer(button);
+        });
+
+        answersContainer.appendChild(button);
+    });
+
+    updateTimer();
+
+    timerID = setInterval(function() {
+
+        timeLeft--;
+
+        updateTimer();
+
+        if (timeLeft <= 0) {
+            timeIsUp();
+        }
+
+    }, 1000);
+}
+
+
+/* ТАЙМЕР */
+
+function updateTimer() {
+
+    document.getElementById("timer").textContent =
+        "⏱ " + timeLeft;
+}
+
+
+/* ВРЕМЯ ЗАКОНЧИЛОСЬ */
+
+function timeIsUp() {
+
+    if (answered) return;
+
+    answered = true;
+
+    clearInterval(timerID);
+
+    const buttons =
+        document.querySelectorAll(".answer");
+
+    buttons.forEach(function(button) {
+
+        button.disabled = true;
+
+        if (button.dataset.correct === "true") {
+            button.classList.add("correct");
+        }
+    });
+
+    setTimeout(nextQuestion, 1500);
+}
+
+
+/* ОТВЕТ */
+
+function selectAnswer(button) {
+
+    if (answered) return;
+
+    answered = true;
+
+    clearInterval(timerID);
+
+    const buttons =
+        document.querySelectorAll(".answer");
+
+    buttons.forEach(function(btn) {
+        btn.disabled = true;
+    });
+
+    if (button.dataset.correct === "true") {
+
+        button.classList.add("correct");
+
+        score += 500 + timeLeft * 50;
+
+    } else {
+
+        button.classList.add("wrong");
+
+        buttons.forEach(function(btn) {
+
+            if (btn.dataset.correct === "true") {
+                btn.classList.add("correct");
+            }
+
+        });
+    }
+
+    document.getElementById("scoreDisplay").textContent =
+        "Очки: " + score;
+
+    setTimeout(nextQuestion, 1200);
+}
+
+
+/* СЛЕДУЮЩИЙ ВОПРОС */
+
+function nextQuestion() {
+
+    currentQuestion++;
+
+    if (currentQuestion < questions.length) {
+
+        showQuestion();
+
+    } else {
+
+        showResult();
+    }
+}
+
+
+/* РЕЗУЛЬТАТ */
+
+function showResult() {
+
+    clearInterval(timerID);
+
+    document.getElementById("quizScreen").style.display = "none";
+    document.getElementById("result").style.display = "flex";
+
+    const maxScore = questions.length * 1500;
+
+    document.getElementById("score").textContent =
+        score + " / " + maxScore + " очков";
+
+    let message;
+
+    const percentage = score / maxScore;
+
+    if (percentage >= 0.8) {
+        message = "🏆 Великолепный результат!";
+    } else if (percentage >= 0.6) {
+        message = "👏 Очень хорошо!";
+    } else if (percentage >= 0.4) {
+        message = "🙂 Неплохо! Можно ещё потренироваться.";
+    } else {
+        message = "📚 Попробуй ещё раз!";
+    }
+
+    document.getElementById("message").textContent =
+        message;
+}
+
+
+/* ПЕРЕЗАПУСК */
+
+document.getElementById("restartButton")
+    .addEventListener("click", function() {
+
+        document.getElementById("result").style.display = "none";
+        document.getElementById("quizScreen").style.display = "flex";
+
+        currentQuestion = 0;
+        score = 0;
+
+        showQuestion();
+    });
+
+
+/* ТЁМНАЯ ТЕМА */
+
+function toggleTheme() {
+
+    document.body.classList.toggle("dark");
+
+    const button =
+        document.getElementById("themeButton");
+
+    if (document.body.classList.contains("dark")) {
+
+        button.textContent = "☀️";
+        button.title = "Включить светлую тему";
+
+    } else {
+
+        button.textContent = "🌙";
+        button.title = "Включить тёмную тему";
+    }
+}
+
+</script>
+
+</body>
+</html>
+```

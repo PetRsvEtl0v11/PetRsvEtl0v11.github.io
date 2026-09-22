@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Крестики-нолики</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:#eef1f6; --text:#22303f; --card:#ffffff; --primary:#3b82f6;
+  --accent:#f59e0b; --border:#cbd5e1; --cell:#ffffff; --cell-hover:#dbeafe;
+  --x:#ef4444; --o:#3b82f6; --win:#10b981; --muted:#64748b;
+  --board-lg:#3b82f6; --disabled-bg:#e2e8f0;
+}
+
+[data-theme="dark"] {
+  --bg:#0f172a; --text:#e2e8f0; --card:#1e293b; --primary:#60a5fa;
+  --accent:#fbbf24; --border:#334155; --cell:#1e293b; --cell-hover:#1e3a5f;
+  --x:#f87171; --o:#60a5fa; --win:#34d399; --muted:#94a3b8;
+  --board-lg:#475569; --disabled-bg:#0b1220;
+}
+
+body {
+  font-family:'Segoe UI', Tahoma, Arial, sans-serif;
+  background:var(--bg); color:var(--text);
+  min-height:100vh; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  transition:background .3s, color .3s;
+  padding:16px 16px 96px;
+}
+
+.screen { display:none; width:100%; max-width:860px; flex-direction:column; align-items:center; }
+.screen.active { display:flex; }
+
+/* ===== Start screen ===== */
+h1 { font-size:2.6em; font-weight:800; margin-bottom:8px; text-align:center;
+  background:linear-gradient(135deg,var(--x),var(--o)); -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent; }
+.start-subtitle { color:var(--muted); margin-bottom:36px; font-size:1.05em; }
+
+.difficulty-buttons { display:flex; flex-direction:column; gap:14px; width:100%; max-width:420px; }
+.diff-btn {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:16px 22px; font-size:1.15em; font-weight:700; color:var(--text);
+  background:var(--card); border:2px solid var(--border); border-radius:12px;
+  cursor:pointer; transition:all .2s; text-align:left;
+}
+.diff-btn:hover { border-color:var(--primary); transform:translateX(6px); box-shadow:0 4px 14px rgba(0,0,0,.12); }
+.diff-btn .label { flex-shrink:0; }
+.diff-btn .hint { color:var(--muted); font-size:.72em; font-weight:400; text-align:right; line-height:1.3; }
+
+/* ===== Game screen ===== */
+.game-header { display:flex; justify-content:space-between; align-items:center;
+  width:100%; margin-bottom:16px; gap:10px; flex-wrap:wrap; }
+.back-btn {
+  padding:8px 16px; background:var(--card); color:var(--text);
+  border:2px solid var(--border); border-radius:8px; cursor:pointer; font-size:.95em;
+  transition:all .2s;
+}
+.back-btn:hover { border-color:var(--primary); }
+.timer { font-family:Consolas,monospace; font-size:1.9em; font-weight:700; letter-spacing:1px; }
+.timer.warning { color:var(--x); animation:pulse 1s infinite; }
+@keyframes pulse { 50% { opacity:.45; } }
+.current-player { font-size:1.05em; font-weight:600; }
+.current-player span { font-size:1.4em; }
+
+#board-container { display:flex; justify-content:center; width:100%; }
+
+/* Simple boards */
+.board { display:grid; gap:6px; padding:8px; background:var(--board-lg);
+  border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.18); overflow:hidden; }
+.board.b3 { grid-template-columns:repeat(3,1fr); width:min(88vw,430px,calc(100vh - 210px)); height:min(88vw,430px,calc(100vh - 210px)); }
+.board.b5 { grid-template-columns:repeat(5,1fr); width:min(90vw,520px,calc(100vh - 210px)); height:min(90vw,520px,calc(100vh - 210px)); }
+.cell {
+  background:var(--cell); border:none; border-radius:8px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-weight:800; color:var(--text); transition:background .15s;
+  font-size:clamp(24px,6vw,58px);
+  min-width:0; min-height:0; padding:0; overflow:hidden;
+}
+.cell:not(.taken):not(.gameover):hover { background:var(--cell-hover); }
+.cell.x { color:var(--x); }
+.cell.o { color:var(--o); }
+.cell.taken { cursor:default; }
+.cell.win { background:var(--win) !important; color:#fff !important; animation:blink .5s 3; }
+@keyframes blink { 50% { background:var(--cell-hover); } }
+
+/* Ultimate boards */
+.meta { display:grid; gap:8px; padding:10px; background:var(--board-lg);
+  border-radius:12px;
+  width:min(96vw,700px,calc(100vh - 210px)); height:min(96vw,700px,calc(100vh - 210px));
+  overflow:hidden; }
+.meta.extreme {
+  width:min(94vw,820px,calc(100vh - 190px)); height:min(94vw,820px,calc(100vh - 190px));
+}
+.meta-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.meta-cell {
+  background:var(--card); border-radius:8px; padding:4px; position:relative;
+  transition:all .2s;
+}
+.meta-cell.grayed { opacity:.55; }
+.mini { display:grid; gap:2px; width:100%; height:100%; }
+.mini.m3 { grid-template-columns:repeat(3,1fr); }
+.mini.m5 { grid-template-columns:repeat(5,1fr); }
+.mini-cell {
+  background:var(--cell); border:none; border-radius:3px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-weight:800;
+  aspect-ratio:1; color:var(--text); transition:background .12s;
+  font-size:clamp(10px,2.4vw,26px);
+  min-width:0; min-height:0; padding:0; overflow:hidden;
+}
+.meta.extreme .mini-cell { font-size:clamp(7px,1.8vw,20px); }
+.mini-cell:not(.taken):not(.gameover):hover { background:var(--cell-hover); }
+.mini-cell.x { color:var(--x); }
+.mini-cell.o { color:var(--o); }
+.mini-cell.win { background:var(--win) !important; color:#fff !important; }
+
+.meta-overlay {
+  position:absolute; inset:0; border-radius:8px; display:flex;
+  align-items:center; justify-content:center; font-size:clamp(28px,7vw,84px);
+  font-weight:900; z-index:2;
+}
+.meta-overlay.x { background:rgba(127,29,29,.82); color:#fecaca; }
+.meta-overlay.o { background:rgba(29,78,216,.82); color:#bfdbfe; }
+.meta-overlay.draw { background:rgba(71,85,105,.82); color:#e2e8f0; font-size:clamp(20px,5vw,52px); }
+
+/* ===== End screen ===== */
+.end-screen { text-align:center; padding-top:10px; }
+#end-badge { font-size:4em; margin-bottom:10px; }
+#end-title { font-size:2.2em; font-weight:800; margin-bottom:6px; }
+.result-text { color:var(--muted); font-size:1.15em; margin-bottom:28px; min-height:24px; }
+.name-box { margin-bottom:30px; }
+.name-box label { display:block; font-size:1em; margin-bottom:10px; color:var(--muted); }
+.name-box input {
+  padding:13px 20px; font-size:1.1em; border:2px solid var(--border);
+  border-radius:10px; background:var(--card); color:var(--text);
+  text-align:center; width:min(90vw,320px); transition:border-color .2s;
+  font-weight:600;
+}
+.name-box input:focus { outline:none; border-color:var(--primary); }
+.end-buttons { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.restart-btn,.menu-btn {
+  padding:15px 34px; font-size:1.15em; font-weight:700; border-radius:12px;
+  border:none; cursor:pointer; transition:all .2s;
+}
+.restart-btn { background:var(--primary); color:#fff; box-shadow:0 6px 16px rgba(59,130,246,.35); }
+.restart-btn:hover { transform:translateY(-3px); box-shadow:0 10px 20px rgba(59,130,246,.4); }
+.menu-btn { background:var(--card); color:var(--text); border:2px solid var(--border); }
+.menu-btn:hover { border-color:var(--primary); }
+
+/* ===== Theme toggle (fixed bottom-right) ===== */
+.theme-toggle {
+  position:fixed; bottom:20px; right:20px; width:50px; height:50px; border-radius:50%;
+  background:var(--card); border:2px solid var(--border); cursor:pointer;
+  font-size:1.5em; display:flex; align-items:center; justify-content:center;
+  z-index:999; transition:all .3s; box-shadow:0 4px 14px rgba(0,0,0,.22);
+}
+.theme-toggle:hover { transform:rotate(25deg) scale(1.08); }
+
+@media (max-width:480px) {
+  h1 { font-size:2em; }
+  .diff-btn { flex-direction:column; text-align:center; padding:12px; }
+  .diff-btn .hint { text-align:center; }
+  .timer { font-size:1.5em; }
+  .game-header { justify-content:center; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== Start screen ===== -->
+<div id="start-screen" class="screen active">
+  <h1>Крестики&nbsp;–&nbsp;нолики</h1>
+  <p class="start-subtitle">Дуэль с ботом · 5 минут · выберите сложность</p>
+  <div class="difficulty-buttons">
+    <button class="diff-btn" onclick="startGame('normal')">
+      <span class="label">Обычный</span>
+      <span class="hint">Классика<br>3&nbsp;×&nbsp;3</span>
+    </button>
+    <button class="diff-btn" onclick="startGame('hard')">
+      <span class="label">Сложный</span>
+      <span class="hint">Поле 5&nbsp;×&nbsp;5<br>ничья невозможна</span>
+    </button>
+    <button class="diff-btn" onclick="startGame('advanced')">
+      <span class="label">Продвинутый</span>
+      <span class="hint">Мини-доски 3&nbsp;×&nbsp;3<br>на большом поле 9&nbsp;×&nbsp;9</span>
+    </button>
+    <button class="diff-btn" onclick="startGame('extreme')">
+      <span class="label">Экстремальный</span>
+      <span class="hint">Мини-доски 5&nbsp;×&nbsp;5<br>на большом поле 15&nbsp;×&nbsp;15</span>
+    </button>
+  </div>
+</div>
+
+<!-- ===== Game screen ===== -->
+<div id="game-screen" class="screen">
+  <div class="game-header">
+    <button class="back-btn" onclick="backToMenu()">← Меню</button>
+    <div class="timer" id="timer">5:00</div>
+    <div class="current-player" id="current-player">Вы: <span>X</span> · ваш ход</div>
+  </div>
+  <div id="board-container"></div>
+</div>
+
+<!-- ===== End screen ===== -->
+<div id="end-screen" class="screen end-screen">
+  <div id="end-badge">🏆</div>
+  <h2 id="end-title">Игра окончена</h2>
+  <div class="result-text" id="result-text"></div>
+  <div class="name-box">
+    <label for="player-name">Подпишите своё имя:</label>
+    <input type="text" id="player-name" placeholder="Ваше имя" maxlength="30">
+  </div>
+  <div class="end-buttons">
+    <button class="restart-btn" onclick="restartGame()">⟳ Рестарт</button>
+    <button class="menu-btn" onclick="backToMenu()">Меню</button>
+  </div>
+</div>
+
+<!-- ===== Theme toggle ===== -->
+<button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Сменить тему">🌙</button>
+
+<script>
+"use strict";
+
+/* ================= Config ================= */
+const CFG = {
+  normal:   { type:"simple",   size:3, winLen:3, noDraw:false, label:"Обычный",      big:3 },
+  hard:     { type:"simple",   size:5, winLen:5, noDraw:true,  label:"Сложный",      big:5 },
+  advanced: { type:"ultimate", msize:3, winLen:3, noDraw:false, label:"Продвинутый",   big:9 },
+  extreme:  { type:"ultimate", msize:5, winLen:5, noDraw:false, label:"Экстремальный", big:15 }
+};
+const DURATION = 300; // always 5 minutes
+const HUMAN="X", BOT="O";
+
+/* ================= State ================= */
+let state = null;
+let currentMode = "normal";
+
+function makeState(){
+  return {
+    cfg: null,
+    simpleBoard: null,
+    meta: null, ultimate: null,
+    turn: HUMAN, over: false, timeLeft: DURATION,
+    timerId: null, moveCount: 0, winLine: null, metaWinLine: null
+  };
+}
+
+/* ================= Screens ================= */
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+}
+
+/* ================= Timer ================= */
+function startTimer(){
+  clearInterval(state.timerId);
+  state.timeLeft = DURATION;
+  const el = document.getElementById("timer");
+  el.textContent = formatTime(state.timeLeft);
+  el.classList.remove("warning");
+  state.timerId = setInterval(()=>{
+    state.timeLeft--;
+    el.textContent = formatTime(state.timeLeft);
+    if (state.timeLeft <= 60) el.classList.add("warning");
+    if (state.timeLeft <= 0){ clearInterval(state.timerId); onTimeout(); }
+  },1000);
+}
+function formatTime(s){
+  const m=Math.floor(s/60), ss=s%60;
+  return m+":"+(ss<10?"0":"")+ss;
+}
+function stopTimer(){ clearInterval(state.timerId); state.timerId=null; }
+
+/* ================= Start game ================= */
+function startGame(mode){
+  currentMode = mode;
+  state = makeState();
+  state.cfg = CFG[mode];
+
+  if (state.cfg.type==="simple"){
+    state.simpleBoard = Array(state.cfg.size*state.cfg.size).fill(null);
+    renderSimple();
+  } else {
+    state.meta = Array(9).fill(null); // 'X', 'O', 'D' or null
+    state.ultimate = [];
+    for(let i=0;i<9;i++) state.ultimate.push(Array(state.cfg.msize*state.cfg.msize).fill(null));
+    renderUltimate();
+  }
+  updateStatus();
+  showScreen("game-screen");
+  startTimer();
+}
+
+/* ================= Rendering: simple ================= */
+function renderSimple(){
+  const size=state.cfg.size;
+  const cont=document.getElementById("board-container");
+  const board=document.createElement("div");
+  board.className="board "+(size===3?"b3":"b5");
+  board.innerHTML="";
+  for(let i=0;i<size*size;i++){
+    const c=document.createElement("button");
+    c.className="cell";
+    c.dataset.i=i;
+    if(state.over) c.classList.add("gameover");
+    c.addEventListener("click",()=>onSimpleClick(i));
+    board.appendChild(c);
+  }
+  cont.innerHTML="";
+  cont.appendChild(board);
+  updateSimpleBoard();
+}
+function updateSimpleBoard(){
+  const cells=document.querySelectorAll("#board-container .cell");
+  const size=state.cfg.size;
+  cells.forEach((c,idx)=>{
+    const v=state.simpleBoard[idx];
+    c.textContent=v||"";
+    c.className="cell"+(v?" taken "+(v==="X"?"x":"o"):"");
+    if(state.over) c.classList.add("gameover");
+  });
+  // highlight winning line
+  if(state.winLine){
+    state.winLine.forEach(i=>{
+      const el=document.querySelectorAll("#board-container .cell")[i];
+      if(el) el.classList.add("win");
+    });
+  }
+}
+
+/* ================= Rendering: ultimate ================= */
+function renderUltimate(){
+  const cfg=state.cfg;
+  const cont=document.getElementById("board-container");
+  const meta=document.createElement("div");
+  meta.className="meta"+(cfg.msize===5?" extreme":"");
+  meta.innerHTML="";
+  for(let row=0;row<3;row++){
+    const mrow=document.createElement("div");
+    mrow.className="meta-row";
+    for(let col=0;col<3;col++){
+      const idx=row*3+col;
+      const mc=document.createElement("div");
+      mc.className="meta-cell";
+      mc.dataset.idx=idx;
+      const mini=document.createElement("div");
+      mini.className="mini "+(cfg.msize===3?"m3":"m5");
+      mini.innerHTML="";
+      for(let j=0;j<cfg.msize*cfg.msize;j++){
+        const mc2=document.createElement("button");
+        mc2.className="mini-cell";
+        mc2.dataset.b=idx; mc2.dataset.c=j;
+        mc2.addEventListener("click",()=>onUltimateClick(idx,j));
+        mini.appendChild(mc2);
+      }
+      mc.appendChild(mini);
+      mrow.appendChild(mc);
+    }
+    meta.appendChild(mrow);
+  }
+  cont.innerHTML="";
+  cont.appendChild(meta);
+  updateUltimate();
+}
+function updateUltimate(){
+  const cfg=state.cfg;
+  const metaEls=document.querySelectorAll("#board-container .meta-cell");
+  metaEls.forEach((mc,idx)=>{
+    mc.classList.remove("active","grayed");
+    let v=state.meta[idx];
+    // clear old overlay
+    const oldOv=mc.querySelector(".meta-overlay");
+    if(oldOv) oldOv.remove();
+    // grayed when this board is done (can't play here)
+    mc.classList.toggle("grayed", !!v);
+    const cellBtns=mc.querySelectorAll(".mini-cell");
+    cellBtns.forEach((b,j)=>{
+      const val=state.ultimate[idx][j];
+      b.textContent=val||"";
+      b.className="mini-cell"+(val?" taken "+(val==="X"?"x":"o"):"");
+      if(state.over) b.classList.add("gameover");
+      b.disabled=false;
+    });
+    // mark winning cells in mini board
+    if(v && v!=="D"){
+      const line=winLineIn(state.ultimate[idx],cfg.msize,cfg.winLen,v);
+      if(line) line.forEach(j=>{
+        const b=cellBtns[j]; if(b){
+          b.classList.add("win");
+          // remove X/O class so win color shows
+          b.classList.remove("x","o");
+        }
+      });
+      const ov=document.createElement("div");
+      ov.className="meta-overlay "+(v==="X"?"x":"o");
+      ov.textContent=v;
+      mc.appendChild(ov);
+    } else if(v==="D"){
+      const ov=document.createElement("div");
+      ov.className="meta-overlay draw";
+      ov.textContent="=";
+      mc.appendChild(ov);
+    }
+  });
+  // gray any board that is full or won when player has free choice
+  if(state.over){
+    document.querySelectorAll("#board-container .mini-cell").forEach(b=>b.classList.add("gameover"));
+  }
+}
+function updateStatus(){
+  const el=document.getElementById("current-player");
+  if(state.over){ el.textContent="Игра окончена"; return; }
+  el.innerHTML = state.turn===HUMAN ? "Вы: <span>"+state.turn+"</span> · ваш ход"
+                                    : "Бот: <span>"+state.turn+"</span> · ходит…";
+}
+
+/* ================= Line helpers ================= */
+function dirs(size){
+  return [[0,1],[1,0],[1,1],[1,-1]];
+}
+function inBounds(r,c,size){ return r>=0&&r<size&&c>=0&&c<size; }
+
+// returns array of indices forming a winning line for p, or null
+function winLineIn(board,size,winLen,p){
+  const dirList=dirs(size);
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(board[r*size+c]!==p) continue;
+      for(const [dr,dc] of dirList){
+        let cnt=1, line=[r*size+c];
+        for(let k=1;k<winLen;k++){
+          const nr=r+dr*k, nc=c+dc*k;
+          if(!inBounds(nr,nc,size)) break;
+          if(board[nr*size+nc]!==p) break;
+          cnt++; line.push(nr*size+nc);
+        }
+        if(cnt>=winLen) return line;
+      }
+    }
+  }
+  return null;
+}
+function isBoardFull(board){ return board.every(v=>v!==null); }
+
+/* ================= Simple logic ================= */
+function onSimpleClick(i){
+  if(state.over) return;
+  if(state.turn!==HUMAN) return;
+  if(state.simpleBoard[i]) return;
+  placeSimple(i,HUMAN);
+  if(state.over) return;
+  state.turn=BOT; updateStatus();
+  setTimeout(botSimple,450);
+}
+function placeSimple(i,p){
+  state.simpleBoard[i]=p;
+  state.moveCount++;
+  const line=winLineIn(state.simpleBoard,state.cfg.size,state.cfg.winLen,p);
+  if(line){
+    state.winLine=line;
+    finishGame(p, simpleDescription(p));
+  } else if(isBoardFull(state.simpleBoard)){
+    // No-winner board filled: in "Сложный" draw never happens -> last mover wins.
+    if(state.cfg.noDraw){
+      state.winLine=[i];
+      finishGame(p,"Ничья невозможна! Последний ход приносит победу: "+(p===HUMAN?"вы победили":"бот победил"));
+    } else {
+      finishGame(null,"Ничья");
+    }
+  }
+  updateSimpleBoard();
+}
+function botSimple(){
+  if(state.over) return;
+  const idx=botBestSimple();
+  if(idx<0) return;
+  placeSimple(idx,BOT);
+  if(state.over) return;
+  state.turn=HUMAN; updateStatus();
+}
+
+/* ================= Ultimate logic ================= */
+function onUltimateClick(b,c){
+  if(state.over) return;
+  if(state.turn!==HUMAN) return;
+  if(state.meta[b]) return; // board already done
+  if(state.ultimate[b][c]) return; // cell already taken
+  placeUltimate(b,c,HUMAN);
+  if(state.over) return;
+  state.turn=BOT; updateStatus();
+  setTimeout(botUltimate,500);
+}
+function placeUltimate(b,c,p){
+  const cfg=state.cfg;
+  state.ultimate[b][c]=p;
+  state.moveCount++;
+  // check mini board win
+  const line=winLineIn(state.ultimate[b],cfg.msize,cfg.winLen,p);
+  if(line && !state.meta[b]){
+    state.meta[b]=p;
+  } else if(!state.meta[b] && isBoardFull(state.ultimate[b])){
+    state.meta[b]="D";
+  }
+  // meta win?
+  const mline=winLineInMeta(p);
+  if(mline){
+    state.metaWinLine=mline;
+    finishGame(p, p===HUMAN ? "Вы собрали три мини-доски в ряд и победили бота!" : "Бот собрал три мини-доски в ряд!");
+  } else if(state.meta.every(v=>v!==null)){
+    finishGame(null,"Ничья: все мини-доски завершены");
+  }
+  updateUltimate();
+}
+
+function winLineInMeta(p){
+  const m=state.meta;
+  const winLines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+  for(const L of winLines){
+    if(L.every(i=>m[i]===p)) return L;
+  }
+  return null;
+}
+
+/* ================= AI (same difficulty everywhere) ================= */
+function botBestSimple(){
+  const size=state.cfg.size, wl=state.cfg.winLen, board=state.simpleBoard;
+  return bestMove(board,size,wl);
+}
+function bestMove(board,size,wl){
+  // 1. winning move
+  for(let i=0;i<board.length;i++){
+    if(!board[i]){
+      board[i]=BOT;
+      const ok=!!winLineIn(board,size,wl,BOT);
+      board[i]=null;
+      if(ok) return i;
+    }
+  }
+  // 2. block player win
+  for(let i=0;i<board.length;i++){
+    if(!board[i]){
+      board[i]=HUMAN;
+      const ok=!!winLineIn(board,size,wl,HUMAN);
+      board[i]=null;
+      if(ok) return i;
+    }
+  }
+  // 3. create double threats, else block opponent double threats
+  let best=-1,bestScore=-1e9;
+  for(let i=0;i<board.length;i++){
+    if(board[i]) continue;
+    let score=0;
+    board[i]=BOT;
+    score+=threatScore(board,size,wl,BOT);
+    board[i]=HUMAN;
+    score+=threatScore(board,size,wl,HUMAN)*1.1; // punish letting player create threats
+    board[i]=null;
+    // positional preference
+    const r=Math.floor(i/size), c=i%size;
+    const center=(size-1)/2;
+    const d=Math.max(Math.abs(r-center),Math.abs(c-center));
+    score+= (size-d)*2;
+    if(score>bestScore){ bestScore=score; best=i; }
+  }
+  if(best>=0) return best;
+  // fallback
+  for(let i=0;i<board.length;i++) if(!board[i]) return i;
+  return -1;
+}
+function threatScore(board,size,wl,p){
+  let score=0;
+  const dirList=dirs(size);
+  for(let r=0;r<size;r++){
+    for(let c=0;c<size;c++){
+      if(board[r*size+c]!==p) continue;
+      for(const [dr,dc] of dirList){
+        let line=1;
+        for(let k=1;k<wl;k++){
+          const nr=r+dr*k,nc=c+dc*k;
+          if(!inBounds(nr,nc,size)) break;
+          if(board[nr*size+nc]!==p && board[nr*size+nc]!==null) break;
+          if(board[nr*size+nc]===null) break; // count only solid segment start
+          line++;
+        }
+        if(line>=2) score+=Math.pow(10,line);
+      }
+    }
+  }
+  return score;
+}
+
+/* Ultimate AI */
+function botUltimate(){
+  if(state.over) return;
+  const cfg=state.cfg;
+  const candidates=[];
+  for(let b=0;b<9;b++) if(!state.meta[b]) candidates.push(b);
+  if(!candidates.length){
+    if(state.meta.every(v=>v!==null)) finishGame(null,"Ничья");
+    return;
+  }
+  // choose board: prefer meta win, then block player meta win, else strategic board
+  let chosen=candidates[0];
+  for(const b of candidates){
+    if(canCompleteMeta(b,BOT)){ chosen=b; break; }
+  }
+  if(chosen===candidates[0]){
+    for(const b of candidates){
+      if(canCompleteMeta(b,HUMAN)){ chosen=b; break; }
+    }
+  }
+  if(chosen===candidates[0]){
+    let cs=-1,v=-1e9;
+    candidates.forEach(b=>{
+      const mv=metaBoardValue(b);
+      if(mv>v){v=mv;cs=b;}
+    });
+    chosen=cs>=0?cs:candidates[0];
+  }
+  // inside chosen board, run simple best move
+  const mv=bestMove(state.ultimate[chosen],cfg.msize,cfg.winLen);
+  if(mv>=0){ placeUltimate(chosen,mv,BOT); }
+  else {
+    // board is full -> treat as draw
+    state.meta[chosen]="D";
+    updateUltimate();
+    if(state.meta.every(v=>v!==null)){
+      finishGame(null,"Ничья: все мини-доски завершены");
+      return;
+    }
+  }
+  if(state.over) return;
+  state.turn=HUMAN; updateStatus();
+}
+// can placing in board b complete a meta line for p next turn
+function canCompleteMeta(b,p){
+  if(state.meta[b]) return false;
+  const m=state.meta.slice();
+  m[b]=p;
+  return !!winLineInMeta(p);
+}
+function metaBoardValue(b){
+  // if we own it, high; if opponent owns, low; else neutral with preference to center
+  const v=state.meta[b];
+  const centerPos=[4,0,2,6,8,1,3,5,7];
+  let base=v===BOT?1000:(v===HUMAN?-500:0);
+  // prefer boards that are near decidable
+  if(base===0){
+    // count marks in mini board
+    const cnt=state.ultimate[b].filter(x=>x!==null).length;
+    base+=Math.pow(cnt,1.5);
+  }
+  base+=centerPos.indexOf(b)*3;
+  return base;
+}
+
+/* ================= End game ================= */
+function simpleDescription(p){
+  const n=state.cfg.winLen;
+  if(p===HUMAN) return "Вы собрали "+n+" в ряд и победили бота!";
+  if(p===BOT) return "Бот собрал "+n+" в ряд — вы проиграли";
+  return "Ничья";
+}
+function finishGame(p,desc){
+  stopTimer();
+  state.over=true;
+  const badge=document.getElementById("end-badge");
+  const title=document.getElementById("end-title");
+  const res=document.getElementById("result-text");
+  if(p===HUMAN){
+    badge.textContent="🏆"; title.textContent="Победа!";
+    res.textContent=desc||simpleDescription(p);
+  } else if(p===BOT){
+    badge.textContent="🤖"; title.textContent="Поражение";
+    res.textContent=desc||simpleDescription(p);
+  } else {
+    badge.textContent="🤝"; title.textContent="Ничья";
+    res.textContent=desc||"Победила дружба";
+  }
+  document.getElementById("player-name").value="";
+  if(state.cfg.type==="ultimate") updateUltimate();
+  else updateSimpleBoard();
+  updateStatus();
+  showScreen("end-screen");
+}
+
+/* ================= Timeout ================= */
+function onTimeout(){
+  stopTimer();
+  state.over=true;
+  let resultDesc="";
+  if(state.cfg.type==="simple"){
+    const b=state.simpleBoard;
+    const cx=b.filter(v=>v==="X").length, co=b.filter(v=>v==="O").length;
+    let p=null;
+    if(state.cfg.noDraw){
+      const xLine=longestLineLength(b,state.cfg.size,state.cfg.winLen,"X");
+      const oLine=longestLineLength(b,state.cfg.size,state.cfg.winLen,"O");
+      if(xLine>oLine) p=HUMAN;
+      else if(oLine>xLine) p=BOT;
+      else p = cx>=co ? HUMAN : BOT; // draw never happens
+      resultDesc = "⏱ Время вышло! Счёт "+cx+":"+co+", линии "+xLine+" против "+oLine+". "+
+        (p===HUMAN?"Вы лидируете — победа!":"Бот лидирует — вы проиграли!");
+    } else {
+      if(cx>co) p=HUMAN; else if(co>cx) p=BOT; else p=null;
+      resultDesc = "⏱ Время вышло! Счёт "+cx+":"+co+". "+
+        (p===HUMAN?"Вы впереди — победа!":p===BOT?"Бот впереди — поражение!":"Ничья по очкам");
+    }
+    finishGame(p,resultDesc);
+  } else {
+    const mx=state.meta.filter(v=>v==="X").length, mo=state.meta.filter(v=>v==="O").length;
+    let p=null;
+    if(mx>mo) p=HUMAN; else if(mo>mx) p=BOT; else p=null;
+    resultDesc="⏱ Время вышло! Достигнутые мини-доски: X "+mx+", O "+mo+". "+
+      (p===HUMAN?"Вы побеждаете!":p===BOT?"Бот побеждает!":"Ничья по результатам");
+    finishGame(p,resultDesc);
+  }
+}
+function longestLineLength(board,size,wl,p){
+  let best=0;
+  const dirList=dirs(size);
+  for(let r=0;r<size;r++)for(let c=0;c<size;c++){
+    if(board[r*size+c]!==p) continue;
+    for(const [dr,dc] of dirList){
+      let seg=1;
+      for(let k=1;k<wl;k++){
+        const nr=r+dr*k,nc=c+dc*k;
+        if(!inBounds(nr,nc,size)||board[nr*size+nc]!==p) break;
+        seg++;
+      }
+      for(let k=1;k<wl;k++){
+        const nr=r-dr*k,nc=c-dc*k;
+        if(!inBounds(nr,nc,size)||board[nr*size+nc]!==p) break;
+        seg++;
+      }
+      if(seg>best) best=seg;
+    }
+  }
+  return best;
+}
+
+/* ================= Buttons ================= */
+function restartGame(){
+  startGame(currentMode);
+}
+function backToMenu(){
+  stopTimer();
+  document.getElementById("board-container").innerHTML="";
+  currentMode="normal";
+  showScreen("start-screen");
+}
+function toggleTheme(){
+  const html=document.documentElement;
+  const dark=html.getAttribute("data-theme")==="dark";
+  html.setAttribute("data-theme", dark?"":"dark");
+  document.getElementById("theme-toggle").textContent=dark?"🌙":"☀️";
+}
+</script>
+</body>
+</html>
